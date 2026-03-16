@@ -1,5 +1,14 @@
-# ColorLSP
+# My Customized Color Highlight for Zed
 
+Fork of https://github.com/huacnlee/color-lsp
+
+Changes:
+- Added support for Flutter/Dart Color(0xAARRGGBB) literals
+- Added "Dart" language support in extension.toml
+
+For personal use in Zed editor.
+Original work by Jason Lee (huacnlee).
+# ColorLSP
 [![Zed Extension](https://img.shields.io/badge/-Zed_Extension-blue?style=flat&logo=zedindustries&logoColor=%23FFFFFF&logoSize=auto&labelColor=%23111111&color=%23084CCF)](https://zed.dev/extensions/color-highlight)
 [![CI](https://github.com/huacnlee/color-lsp/actions/workflows/test.yml/badge.svg)](https://github.com/huacnlee/color-lsp/actions/workflows/test.yml)
 
@@ -12,3 +21,4 @@ ColorLSP is a Language Server Protocol (LSP) implementation for the highlight co
 ## License
 
 MIT
+
