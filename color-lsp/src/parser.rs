@@ -178,6 +178,33 @@ pub fn parse(text: &str) -> Vec<ColorNode> {
                         }
                     }
                 }
+                'c' | 'C' => {
+                    token.clear();
+                    token.push(c);
+                
+                    // Continue collecting until we have enough to check or reach end
+                    let mut local_offset = offset + 1;
+                    while local_offset < line_text.chars().count() {
+                        let next_c = line_text.chars().nth(local_offset).unwrap_or(' ');
+                        token.push(next_c);
+                        local_offset += 1;
+                
+                        // If we hit closing ), try to parse
+                        if next_c == ')' {
+                            // Now check if it's Color(0x...)
+                            if let Some(node) = try_parse_dart_color(&token, ix, offset) {
+                                nodes.push(node);
+                                // Jump offset forward to after this match
+                                offset = local_offset - 1; // -1 because outer loop will +1
+                                token.clear();
+                                break;
+                            }
+                            // If not matched, continue normally
+                            break;
+                        }
+                    }
+                    // If no closing ) found, just proceed (token will be cleared next non-letter)
+                }
                 'a'..='z' | 'A'..='Z' | '(' => {
                     // Avoid `Ok(hsla(`, to get `hsla(`
                     if token.contains('(') {
@@ -233,6 +260,52 @@ fn match_color(part: &str, line_ix: usize, character: usize) -> Option<ColorNode
     }
 }
 
+/// Try to parse Flutter/Dart style Color(0xAARRGGBB) or Color(0xRRGGBB)
+fn try_parse_dart_color(s: &str, line_ix: usize, char_offset: usize) -> Option<ColorNode> {
+    let s_trim = s.trim();
+
+    // Basic pattern match: Color(0xFFxxxxxx) or Color(0xffxxxxxx), case insensitive
+    if !s_trim.to_lowercase().starts_with("color(") || !s_trim.ends_with(')') {
+        return None;
+    }
+
+    // Extract content inside ()
+    let inner = &s_trim[6..s_trim.len() - 1].trim(); // skip "Color(" and ")"
+
+    if !inner.to_lowercase().starts_with("0x") {
+        return None;
+    }
+
+    let hex_part = &inner[2..]; // after "0x"
+
+    // Only accept 6 or 8 hex digits (RGB or ARGB)
+    if hex_part.len() != 6 && hex_part.len() != 8 {
+        return None;
+    }
+
+    // Validate it's all hex
+    if !hex_part.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+
+    // Convert to #RRGGBB or #AARRGGBB for csscolorparser
+    let hex_for_parse = if hex_part.len() == 6 {
+        format!("#{}", hex_part)
+    } else {
+        // ARGB → move alpha to end for csscolorparser which expects #RRGGBBAA
+        let a = &hex_part[0..2];
+        let rgb = &hex_part[2..];
+        format!("#{}{}", rgb, a)
+    };
+
+    // Try parse (using existing try_parse_color which falls back to csscolorparser)
+    if let Ok(color) = try_parse_color(&hex_for_parse) {
+        // Return node with ORIGINAL matched string (Color(0xFF...))
+        Some(ColorNode::new(s_trim, color, line_ix, char_offset))
+    } else {
+        None
+    }
+}
 #[cfg(test)]
 mod tests {
     use csscolorparser::Color;

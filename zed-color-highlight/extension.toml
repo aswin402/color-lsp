@@ -33,5 +33,6 @@ languages = [
     "Ruby",
     "Python",
     "Go",
+    "Dart",
 ]
 code_action_kinds = []
